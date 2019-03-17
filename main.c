@@ -2,17 +2,25 @@
 #include <dirent.h>
 #include <string.h>
 #include <ctype.h>
+#include <stdlib.h>
 
 typedef struct dirent* dirent;
+
+void print(char* path)
+{
+    FILE* sol = fopen("result.txt","a");
+    fprintf(sol,"%s",path);
+}
 
 void search(char* path,char* filename)
 {
 	DIR* base = opendir(path);
 
 	FILE* file;
-        if((file = fopen(filename,"r"))
+        if((file = fopen(filename,"r")))
 		{
-			char* files; 
+			char* files;
+			char* s = malloc(sizeof(char)*80);
 			do
 			{
 				fgets(s,80,file);
@@ -39,21 +47,17 @@ void search(char* path,char* filename)
 		dirent direct;
 		while((direct = readdir(base)))
 		{
-			if(direct->d_type == 4)
+			if(direct.d_type == 4)
 			{
-				search(strcat(strcat(path,"/"),direct->d_name));
+				search(strcat(strcat(path,"/"),direct->d_name),filename);
 			}
 		}
 	}
 }
 
-void print(char* path)
-{
-	FILE sol = ("result.txt","a");
-	fprintf(sol,"%s",path);
-}
+
 
 int main()
 {
-	find(".","file.txt");
+	search(".","file.txt");
 }
