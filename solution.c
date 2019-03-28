@@ -1,25 +1,21 @@
 #include <stdio.h>
 #include <dirent.h>
 #include <string.h>
-#include <ctype.h>
 #include <stdlib.h>
 
-#define HOMEDIR '.'
+FILE *sol;
 
-char path[3000] = ".", filename[30] = "file.txt", ex1[2] = ".\0", ex2[3] = "..\0", min[] = "Minotaur", bl[] = "Deadlock";
-
+char path[300] = ".", filename[300] = "file.txt", ex1[2] = ".\0", ex2[3] = "..\0", min[] = "Minotaur", bl[] = "Deadlock";
 typedef struct dirent *direct;
 
-void print(char *path) {
-    FILE *sol = fopen("result.txt", "a");
-    fprintf(sol, "%s\n", path);
-    fclose(sol);
+void print(char *str) {
+    fprintf(sol, "%s\n", str);
 }
 
 char *createname() {
     char *a = calloc(strlen(path) + strlen(filename) + 1, sizeof(char));
     char d[2] = "/\0";
-    strcat(a, path);
+    strcpy(a, path);
     strcat(a, d);
     strcat(a, filename);
     return a;
@@ -27,49 +23,64 @@ char *createname() {
 
 void search() {
     DIR *dir = opendir(path);
-    char *tmp;
-    int a;
-
-    tmp = createname(path, filename);
-    FILE *doc;
-    if ((doc = fopen(tmp, "r"))) {
-        print(tmp);
-        free(tmp);
-        char buf[80];
-        while (!feof(doc)) {
-            fgets(buf, 80, doc);
-            strcpy(filename,strtok(buf, " \n\0"));
-            if (!strcmp(filename, min)) {
-                exit(0);
-            } else if (!strcmp(filename, bl)) {
-                free(tmp);
-                path[0] = HOMEDIR;
-                path[1] = 0;
-                return;
+    direct temp = 0;
+    char **dirarr = calloc(1, sizeof(char *)), **filearr = calloc(1, sizeof(char *)), *filepath = 0;
+    int i = 0;
+    FILE *file = NULL;
+    while ((temp = readdir(dir))) {
+        if (temp->d_type == DT_DIR && strcmp(temp->d_name, ex1) != 0 && strcmp(temp->d_name, ex2) != 0) {
+            dirarr = realloc(dirarr, sizeof(char *) * (i + 1));
+            dirarr[i] = calloc(100, sizeof(char));
+            strcat(strcat(strcpy(dirarr[i++], path), (char *) &"/"), temp->d_name);
+        } else if (!strcmp(temp->d_name, filename)) {
+            /* ##################*/
+            for (int j = 0; j < i; j++) {
+                dirarr[j] = "\0";
             }
-            strcpy(filename,strtok(NULL, " \n\0"));
-            path[0] = HOMEDIR;
-            path[1] = 0;
-            search();
-        }
-    } else {
-        direct files;
-        while ((files = readdir(dir))) {
-            if (files->d_type == DT_DIR && strcmp(files->d_name, ex1) && strcmp(files->d_name, ex2)) {
-                a = strlen(path);
-                path[strlen(path) + 1] = '\0';
-                path[strlen(path)] = '/';
-                strcat(path, files->d_name);
-                search();
-                path[a] = '\0';
+            i = 0;
+            dirarr = 0;
+            /* ###################*/
+            filepath = createname();
+            print(filepath);
+            file = fopen(filepath, "r");
+            free(filepath);
+            while (!feof(file)) {
+                filearr = realloc(filearr, sizeof(char *) * (i + 1));
+                filearr[i] = calloc(80, sizeof(char));
+                fgets(filearr[i], 80, file);
+                if (!strcmp(filearr[i], bl))
+                    return;
+                else if (!strcmp(filearr[i], min))
+                    exit(0);
+                filearr[i] = strtok(filearr[i], " \0\n");
+                filearr[i++] = strtok(NULL, "\n \0");
             }
+            fclose(file);
+            break;
         }
     }
-    free(tmp);
+    closedir(dir);
+    if (dirarr) {
+        filepath = calloc(100,sizeof(char));
+        strcpy(filepath,filename);
+        for (int j = 0; j < i; j++) {
+            if (strcmp(filename,filepath)) break;
+            strcpy(path, dirarr[j]);
+            search();
+        }
+    } else if (filearr) {
+        for (int j = 0; j < i; j++) {
+            strcpy(path, (char *) &".");
+            strcpy(filename, filearr[j]);
+            search();
+        }
+        free(filearr);
+    }
 }
 
 int main() {
-    FILE *a = fopen("result.txt", "w");
-    fclose(a);
-    search(path, filename);
+    fclose(fopen("result.txt", "w"));
+    sol = fopen("result.txt", "a");
+    search();
+    fclose(sol);
 }
