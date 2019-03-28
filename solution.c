@@ -41,9 +41,7 @@ void search() {
             dirarr = 0;
             /* ###################*/
             filepath = createname();
-            print(filepath);
             file = fopen(filepath, "r");
-            free(filepath);
             while (!feof(file)) {
                 filearr = realloc(filearr, sizeof(char *) * (i + 1));
                 filearr[i] = calloc(80, sizeof(char));
@@ -55,6 +53,8 @@ void search() {
                 filearr[i] = strtok(filearr[i], " \0\n");
                 filearr[i++] = strtok(NULL, "\n \0");
             }
+            print(filepath);
+            free(filepath);
             fclose(file);
             break;
         }
@@ -64,7 +64,7 @@ void search() {
         filepath = calloc(100,sizeof(char));
         strcpy(filepath,filename);
         for (int j = 0; j < i; j++) {
-            if (strcmp(filename,filepath)) break;
+            if (strcmp(filename,filepath) != 0) break;
             strcpy(path, dirarr[j]);
             search();
         }
