@@ -1,4 +1,0 @@
-@include file_2048.txt
-@include file_625.txt
-@include file_945.txt
-@include file_1511.txt

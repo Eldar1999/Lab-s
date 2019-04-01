@@ -1,3 +1,0 @@
-@include file_147.txt
-@include file_1.txt
-@include file_1957.txt
