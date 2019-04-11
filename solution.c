@@ -12,10 +12,13 @@ struct list {
 void print(struct list *fpath) {
     FILE *stream = fopen("result.txt", "w");
     char tmp[30][100];
+    struct list* temp;
     int i = 0;
     while (fpath) {
         strcpy(tmp[i++], fpath->path);
+	temp = fpath;
         fpath = fpath->prev;
+	free(temp);
     }
     for (int j = i - 1; j >= 0; j--) {
         fprintf(stream, "%s\n", tmp[j]);
@@ -67,7 +70,6 @@ int search(struct list *prev, char* path, char* filename) {
                     free(fpath);
                     return 1;
                 } else if (!strcmp(filearr[i], (const char *) &"Minotaur")) {
-                    free(fpath);
                     fclose(file);
                     print(fpath);
                     return 2;
