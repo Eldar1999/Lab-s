@@ -1,86 +1,115 @@
-#include <stdio.h>
 #include <dirent.h>
-#include <string.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <stddef.h>
 
-FILE *sol;
+struct list {
+    char *path;
+    struct list *prev;
+};
 
-char path[300] = ".", filename[300] = "file.txt", ex1[2] = ".\0", ex2[3] = "..\0", min[] = "Minotaur", bl[] = "Deadlock";
-typedef struct dirent *direct;
-
-void print(char *str) {
-    fprintf(sol, "%s\n", str);
+void print(struct list *fpath) {
+    FILE *stream = fopen("result.txt", "w");
+    char tmp[30][100];
+    int i = 0;
+    while (fpath) {
+        strcpy(tmp[i++], fpath->path);
+        fpath = fpath->prev;
+    }
+    for (int j = i - 1; j >= 0; j--) {
+        fprintf(stream, "%s\n", tmp[j]);
+    }
+    fclose(stream);
 }
 
-char *createname() {
-    char *a = calloc(strlen(path) + strlen(filename) + 1, sizeof(char));
-    char d[2] = "/\0";
+char *createpath(char *path, char *name) {
+    char *a = calloc(100, sizeof(char));
     strcpy(a, path);
-    strcat(a, d);
-    strcat(a, filename);
+    strcat(a, (const char *) &"/");
+    strcat(a, name);
     return a;
 }
 
-void search() {
+int search(struct list *prev, char* path, char* filename) {
     DIR *dir = opendir(path);
-    direct temp = 0;
-    char **dirarr = calloc(1, sizeof(char *)), **filearr = calloc(1, sizeof(char *)), *filepath = 0;
+    struct dirent *obj;
+    char **dirarr = 0, **filearr = 0;
     int i = 0;
-    FILE *file = NULL;
-    while ((temp = readdir(dir))) {
-        if (temp->d_type == DT_DIR && strcmp(temp->d_name, ex1) != 0 && strcmp(temp->d_name, ex2) != 0) {
-            dirarr = realloc(dirarr, sizeof(char *) * (i + 1));
+    while ((obj = readdir(dir))) {
+        if (obj->d_type == DT_DIR && strcmp(obj->d_name, (char *) &".") != 0 &&
+            strcmp(obj->d_name, (char *) &"..") != 0) {
+            dirarr = realloc(dirarr, (i + 1) * sizeof(char *));
             dirarr[i] = calloc(100, sizeof(char));
-            strcat(strcat(strcpy(dirarr[i++], path), (char *) &"/"), temp->d_name);
-        } else if (!strcmp(temp->d_name, filename)) {
-            /* ##################*/
+            strcpy(dirarr[i++], obj->d_name);
+        } else if (!strcmp(obj->d_name, filename)) {
+            closedir(dir);
             for (int j = 0; j < i; j++) {
-                dirarr[j] = "\0";
+                free(dirarr[j]);
             }
+            free(dirarr);
+            dirarr = NULL;
             i = 0;
-            dirarr = 0;
-            /* ###################*/
-            filepath = createname();
-            file = fopen(filepath, "r");
-            while (!feof(file)) {
-                filearr = realloc(filearr, sizeof(char *) * (i + 1));
-                filearr[i] = calloc(80, sizeof(char));
-                fgets(filearr[i], 80, file);
-                if (!strcmp(filearr[i], bl))
-                    return;
-                else if (!strcmp(filearr[i], min))
-                    exit(0);
-                filearr[i] = strtok(filearr[i], " \0\n");
-                filearr[i++] = strtok(NULL, "\n \0");
-            }
-            print(filepath);
+            char *filepath = createpath(path, filename);
+            FILE *file = fopen(filepath, "r");
+            struct list *fpath = calloc(1, sizeof(struct list));
+            fpath->path = calloc(100, sizeof(char));
+            fpath->prev = prev;
+            strcpy(fpath->path, filepath);
+            prev = fpath;
             free(filepath);
+            do {
+                filearr = realloc(filearr, (i + 1) * sizeof(char *));
+                filearr[i] = calloc(30, sizeof(char));
+                fgets(filearr[i], 30, file);
+                if (!strcmp(filearr[i], (const char *) &"Deadlock")) {
+                    fclose(file);
+                    free(fpath);
+                    return 1;
+                } else if (!strcmp(filearr[i], (const char *) &"Minotaur")) {
+                    free(fpath);
+                    fclose(file);
+                    print(fpath);
+                    return 2;
+                }
+                filearr[i] = &filearr[i][9];
+                filearr[i][strlen(filearr[i]) - 1] = 0;
+                i++;
+            } while (!feof(file));
+            free(filearr[i - 1] - 9);
             fclose(file);
             break;
         }
     }
-    closedir(dir);
-    if (dirarr) {
-        filepath = calloc(100,sizeof(char));
-        strcpy(filepath,filename);
-        for (int j = 0; j < i; j++) {
-            if (strcmp(filename,filepath) != 0) break;
-            strcpy(path, dirarr[j]);
-            search();
-        }
-    } else if (filearr) {
-        for (int j = 0; j < i; j++) {
-            strcpy(path, (char *) &".");
-            strcpy(filename, filearr[j]);
-            search();
+    int return_value = 0;
+    if (filearr) {
+        for (int j = 0; j < i - 1; j++) {
+            if (return_value != 2) {
+                strcpy(filename, filearr[j]);
+                strcpy(path, "./labyrinth");
+                return_value = search(prev,path,filename);
+            }
+            free(filearr[j] - 9);
         }
         free(filearr);
+    } else if (dirarr) {
+        char *tmp = calloc(100, sizeof(char)), *tmp2;
+        strcpy(tmp, path);
+        for (int j = 0; j < i; j++) {
+            tmp2 = createpath(path,dirarr[j]);
+            strcpy(path, tmp2);
+            free(tmp2);
+            free(dirarr[j]);
+            if (return_value == 0) return_value = search(prev, path, filename);
+            strcpy(path, tmp);
+        }
+        free(dirarr);
+        free(tmp);
     }
+    return return_value;
 }
 
 int main() {
-    fclose(fopen("result.txt", "w"));
-    sol = fopen("result.txt", "a");
-    search();
-    fclose(sol);
+    char path[100] = "./labyrinth",file[30] = "file.txt";
+    return search(NULL, path, file);
 }
